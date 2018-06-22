@@ -8,7 +8,6 @@ static double dot_product(double *A, double *B)
     int k;
     double sum = 0.;
     
-#pragma omp parallel for reduction(+:sum)
     for (k = 0; k < N; k++) {
         sum += A[k] * B[k];
     }
@@ -20,7 +19,6 @@ static void multiply_add(double *A, double c, double *B)
 {
     int k;
 
-#pragma omp parallel for
     for (k = 0; k < N; k++) {
         A[k] += c * B[k];
     }
@@ -30,7 +28,6 @@ static void multiply(double *A, double c)
 {
     int k;
     
-#pragma omp parallel for
     for (k = 0; k < N; k++) {
         A[k] *= c; 
     }
