@@ -6,7 +6,7 @@ program main
   
   integer :: i, rank, ierr
   real(8),dimension(:,:),allocatable :: vector
-  real(8) :: time_interval = 0.0_8, rms
+  real(8) :: time_interval = 0.0_8
   
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
@@ -21,8 +21,7 @@ program main
   
   if (0 == rank) then
     time_interval = time_interval + MPI_WTIME()
-    rms = rms_error(vector)
-    write(*,'(A,e20.10)') "error: ", rms
+    write(*,'(A,e20.10)') "error: ", rms_error(vector)
     write(*,'(A,f10.3,A)') "elapsed time: ", time_interval, " sec"
   endif
   
@@ -34,15 +33,18 @@ contains
   
   subroutine initialize(vector)
     real(8), dimension(0:N-1,0:M-1) :: vector
-    integer :: i, k
+    integer :: i, k, seed_size
+    integer, dimension(:), ALLOCATABLE :: seed
     integer, dimension(3) :: timeArray
     
-    ! call itime(timeArray)
-    ! call srand(timeArray(1)+timeArray(2)+timeArray(3))
-    call srand(0)
+    call random_seed(size=seed_size)
+    allocate(seed(seed_size))
+    seed = 0
+    call random_seed(put=seed)    
+    call random_number(vector)
     do i = 0, M - 1
       do k = 0, N - 1
-        vector(k, i) = 2.0_8*rand() - 1.0_8
+        vector(k, i) = 2.0_8*vector(k, i) - 1.0_8
       enddo
     enddo
 
