@@ -1,5 +1,4 @@
-#define M 20000
-#define N 400
+#define M 200000
+#define N 100
 
-void gram_schmidt(double **vector);
- 
+void gram_schmidt(double *vector[]);

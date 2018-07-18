@@ -33,7 +33,7 @@ static void multiply(double *A, double c)
     }
 }
 
-void gram_schmidt(double **vector)
+void gram_schmidt(double *vector[])
 {
     int rank;
     int i, j;

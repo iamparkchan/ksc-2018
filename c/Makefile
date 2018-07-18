@@ -1,7 +1,7 @@
 CC = mpicc
 TARGET = gs
 OBJECTS = main.o gram_schmidt.o
-CFLAGS = -O0 -fopenmp 
+CFLAGS = -O0 -std=c99 -fopenmp 
 LIBS = -lm
 
 all : $(TARGET)
