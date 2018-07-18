@@ -18,7 +18,6 @@ static double dot_product(double *A, double *B, int n)
     return sum;
 }
 
-
 static void multiply_add(double *A, double c, double *B, int n)
 {
     int k;
