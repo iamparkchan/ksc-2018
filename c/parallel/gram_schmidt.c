@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-static double dot_product(double *A, double *B, int n)
+static double dot_product(double *A, double *B, int n, MPI_Comm comm)
 {
     int k;
     double sum = 0.;
@@ -13,7 +13,7 @@ static double dot_product(double *A, double *B, int n)
         sum += A[k] * B[k];
     }
 
-    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, comm);
 
     return sum;
 }
@@ -38,6 +38,8 @@ static void multiply(double *A, double c, int n)
     }
 }
 
+#define CEIL_DIV(x, y) (((x) + (y) - 1) / (y))
+
 void gram_schmidt(double *vector[])
 {
     int i, j, r;
@@ -47,50 +49,60 @@ void gram_schmidt(double *vector[])
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+    
+    int unit = CEIL_DIV(M, size);
+    int nprocs = CEIL_DIV(M, unit);
 
-    int counts[size], displs[size];
+    MPI_Group world_group;
+    MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+    MPI_Group work_group;
+    int range[3] = {0, nprocs - 1, 1};
+    MPI_Group_range_incl(world_group, 1, &range, &work_group);
+    MPI_Comm comm;
+    MPI_Comm_create(MPI_COMM_WORLD, work_group, &comm);
+    MPI_Group_free(&world_group);
+    MPI_Group_free(&work_group);
+    
+    if (rank >= nprocs) return;
+    MPI_Comm_rank(comm, &rank);
 
-    int unit = (M + size - 1) / size;
-    for (r = 0; r < size; r++) {
-        if (unit*(r + 1) <= M) {
+    int counts[nprocs], displs[nprocs];
+
+    for (r = 0; r < nprocs; r++) {
+        if (r != nprocs - 1) {
             counts[r] = unit;
-        } else if (unit*r < M) {
-            counts[r] = M - unit*r;
         } else {
-            counts[r] = 0;
+            counts[r] = M - unit*r;
         }
         displs[r] = unit*r;
     }
+    
     int chunk = counts[rank];
 
-    if (chunk > 0) {
-        for (i = 0; i < N; i++) {
-            v[i] = malloc(sizeof(double) * chunk);
-        }
+    for (i = 0; i < N; i++) {
+        v[i] = malloc(sizeof(double) * chunk);
     }
 
     for (i = 0; i < N; i++) {
-        MPI_Scatterv(vector[i], counts, displs, MPI_DOUBLE, v[i], chunk, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Scatterv(vector[i], counts, displs, MPI_DOUBLE, v[i], chunk, MPI_DOUBLE, 0, comm);
     }
 
-    if (chunk > 0) {
-        for (j = 0; j < N; j++) {
-            for (i = 0; i < j; i++) {
-                coef = -dot_product(v[i], v[j], chunk);
-                multiply_add(v[j], coef, v[i], chunk);
-            }
-            coef = 1. / sqrt(dot_product(v[j], v[j], chunk));
-            multiply(v[j], coef, chunk);
+    for (j = 0; j < N; j++) {
+        for (i = 0; i < j; i++) {
+            coef = -dot_product(v[i], v[j], chunk, comm);
+            multiply_add(v[j], coef, v[i], chunk);
         }
+        coef = 1. / sqrt(dot_product(v[j], v[j], chunk, comm));
+        multiply(v[j], coef, chunk);
     }
 
     for (i = 0; i < N; i++) {
-        MPI_Gatherv(v[i], chunk, MPI_DOUBLE, vector[i], counts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(v[i], chunk, MPI_DOUBLE, vector[i], counts, displs, MPI_DOUBLE, 0, comm);
     }
 
-    if (chunk > 0) {
-        for (i = 0; i < N; i++) {
-            free(v[i]);
-        }
+    for (i = 0; i < N; i++) {
+        free(v[i]);
     }
+    
+    MPI_Comm_free(&comm);
 }
