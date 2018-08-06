@@ -41,10 +41,13 @@ int main(int argc, char *argv[])
         time_interval += MPI_Wtime();
         
         printf("Elapsed Time: %f sec\n", time_interval);
-        
-        printf("Orthogonality Test: %e\n", orthogonality_test(basis));
-        printf("Span Test: %e\n", span_test(vector, basis));
-        
+
+        double test1_val = orthogonality_test(basis);
+        printf("Orthogonality Test: %e\n", test1_val);
+        double test2_val = span_test(vector, basis);
+        printf("Span Test: %e\n", test2_val);
+        printf("Test Result: %s\n", (test1_val < 1e-12 && test2_val < 1e-12) ? "pass" : "fail");
+
         for (i = 0; i < N; i++) {
             free(vector[i]);
             free(basis[i]);

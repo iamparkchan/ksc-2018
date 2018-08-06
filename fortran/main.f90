@@ -7,8 +7,8 @@ program main
   
   integer :: i, rank, ierr
   real(8), dimension(:,:), allocatable :: vector, basis
-  real(8) :: time_interval
-  
+  real(8) :: time_interval, test1_val, test2_val
+
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)
   
@@ -26,8 +26,17 @@ program main
   if (0 == rank) then
     time_interval = time_interval + MPI_WTIME()
     write(*,'(A,f10.6,A)') "Elapsed Time: ", time_interval, " sec"
-    write(*,'(A,e13.6)') "Orthogonality Test: ", orthogonality_test(basis)
-    write(*,'(A,e13.6)') "Span Test: ", span_test(vector, basis)
+    
+    test1_val = orthogonality_test(basis)
+    write(*,'(A,e13.6)') "Orthogonality Test: ", test1_val
+    test2_val = span_test(vector, basis)
+    write(*,'(A,e13.6)') "Span Test: ", test2_val
+
+    if (test1_val < 1.0e-12 .and. test2_val < 1.0e-12) then
+      write(*,'(A)') 'Test Result: pass'
+    else
+      write(*,'(A)') 'Test Result: fail'
+    endif
 
     deallocate(vector)
     deallocate(basis)
